@@ -27,13 +27,6 @@ defined( 'ABSPATH' ) || exit;
 class Rest {
 
 	/**
-	 * Instance of this class.
-	 *
-	 * @var self|null
-	 */
-	private static ?self $instance = null;
-
-	/**
 	 * Collection of endpoints to be registered
 	 *
 	 * @var array
@@ -62,25 +55,22 @@ class Rest {
 	private bool $debug = false;
 
 	/**
-	 * Get instance of this class.
-	 *
-	 * @return self Instance of this class.
-	 */
-	public static function instance(): self {
-		if ( null === self::$instance ) {
-			self::$instance = new self();
-		}
-
-		return self::$instance;
-	}
-
-	/**
 	 * Constructor
 	 *
-
+	 * @param string $namespace Optional API namespace
+	 * @param string $prefix    Optional prefix for debugging
 	 */
-	private function __construct() {
+	public function __construct( string $namespace = '', string $prefix = '' ) {
 		$this->debug = defined( 'WP_DEBUG' ) && WP_DEBUG;
+
+		if ( ! empty( $namespace ) ) {
+			$this->set_namespace( $namespace );
+		}
+
+		if ( ! empty( $prefix ) ) {
+			$this->set_prefix( $prefix );
+		}
+
 		add_action( 'rest_api_init', [ $this, 'register_endpoints' ] );
 	}
 
@@ -273,26 +263,4 @@ class Rest {
 			) );
 		}
 	}
-
-	/**
-	 * Helper method to register REST endpoints
-	 *
-	 * @param string $namespace API namespace
-	 * @param array  $endpoints Array of endpoints to register
-	 * @param string $prefix    Optional prefix
-	 *
-	 * @return bool
-	 */
-	public static function register( string $namespace, array $endpoints = [], string $prefix = '' ): bool {
-		$instance = self::instance()
-		                ->set_prefix( $prefix )
-		                ->set_namespace( $namespace );
-
-		if ( ! empty( $endpoints ) ) {
-			$instance->add_endpoints( $endpoints );
-		}
-
-		return true;
-	}
-
 }

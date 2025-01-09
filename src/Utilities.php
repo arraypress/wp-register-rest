@@ -45,9 +45,8 @@ if ( ! function_exists( 'register_rest_endpoints' ) ):
 	 *     ]
 	 * ];
 	 *
-	 * register_rest_endpoints('my-plugin/v1', $endpoints);
+	 * register_rest_endpoints('my-plugin/v1', $endpoints, 'my-plugin');
 	 * ```
-	 *
 	 *
 	 * @param string $namespace API namespace (e.g., 'my-plugin/v1')
 	 * @param array  $endpoints Array of endpoints to register
@@ -56,7 +55,17 @@ if ( ! function_exists( 'register_rest_endpoints' ) ):
 	 * @return bool True on success, false on failure
 	 */
 	function register_rest_endpoints( string $namespace, array $endpoints, string $prefix = '' ): bool {
-		return Rest::register( $namespace, $endpoints, $prefix );
+		try {
+			$rest = new Rest( $namespace, $prefix );
+
+			return ! empty( $endpoints ) && $rest->add_endpoints( $endpoints ) instanceof Rest;
+		} catch ( Exception $e ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( sprintf( 'REST registration failed: %s', $e->getMessage() ) );
+			}
+
+			return false;
+		}
 	}
 endif;
 
@@ -68,7 +77,6 @@ if ( ! function_exists( 'get_rest_endpoint_url' ) ):
 	 * ```php
 	 * $url = get_rest_endpoint_url('my-plugin/v1', '/items');
 	 * ```
-	 *
 	 *
 	 * @param string $namespace API namespace
 	 * @param string $endpoint  Endpoint route
@@ -84,12 +92,22 @@ if ( ! function_exists( 'validate_rest_schema' ) ):
 	/**
 	 * Helper function to validate data against a REST schema.
 	 *
+	 * Example usage:
+	 * ```php
+	 * $schema = [
+	 *     'name' => [
+	 *         'type' => 'string',
+	 *         'required' => true
+	 *     ]
+	 * ];
+	 * $data = ['name' => 'John'];
+	 * $result = validate_rest_schema($schema, $data);
+	 * ```
+	 *
 	 * @param array $schema Schema to validate against
 	 * @param array $data   Data to validate
 	 *
 	 * @return bool|WP_Error True if valid, WP_Error if invalid
-	 *@since 1.0.0
-	 *
 	 */
 	function validate_rest_schema( array $schema, array $data ) {
 		// Get REST Server instance
@@ -116,7 +134,7 @@ if ( ! function_exists( 'validate_rest_schema' ) ):
 				$errors->add(
 					$valid->get_error_code(),
 					sprintf( '%s: %s', $param, $valid->get_error_message() ),
-					array( 'param' => $param )
+					[ 'param' => $param ]
 				);
 			}
 		}
